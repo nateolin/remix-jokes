@@ -1,8 +1,8 @@
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, json, Link, useSearchParams } from "remix";
+import { useActionData, json, useSearchParams, Link } from "remix";
 
 import { db } from "~/utils/db.server";
-import { createUserSession, login } from "~/utils/session.server";
+import { createUserSession, login, register } from "~/utils/session.server";
 import stylesUrl from "~/styles/login.css";
 
 export const links: LinksFunction = () => {
@@ -64,7 +64,6 @@ export const action: ActionFunction = async ({ request }) => {
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
-      console.log({ user });
       if (!user) {
         return badRequest({
           fields,
@@ -72,13 +71,6 @@ export const action: ActionFunction = async ({ request }) => {
         });
       }
       return createUserSession(user.id, redirectTo);
-      // login to get the user
-      // if there's no user, return the fields and a formError
-      // if there is a user, create their session and redirect to /jokes
-      return badRequest({
-        fields,
-        formError: "Not implemented",
-      });
     }
     case "register": {
       const userExists = await db.user.findFirst({
@@ -90,12 +82,14 @@ export const action: ActionFunction = async ({ request }) => {
           formError: `User with username ${username} already exists`,
         });
       }
-      // create the user
-      // create their session and redirect to /jokes
-      return badRequest({
-        fields,
-        formError: "Not implemented",
-      });
+      const user = await register({ username, password });
+      if (!user) {
+        return badRequest({
+          fields,
+          formError: `Something went wrong trying to create a new user.`,
+        });
+      }
+      return createUserSession(user.id, redirectTo);
     }
     default: {
       return badRequest({
@@ -115,7 +109,7 @@ export default function Login() {
         <h1>Login</h1>
         <form
           method="post"
-          aria-describedby={
+          aria-errormessage={
             actionData?.formError ? "form-error-message" : undefined
           }
         >
@@ -156,7 +150,7 @@ export default function Login() {
               name="username"
               defaultValue={actionData?.fields?.username}
               aria-invalid={Boolean(actionData?.fieldErrors?.username)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username ? "username-error" : undefined
               }
             />
@@ -166,7 +160,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -180,7 +174,7 @@ export default function Login() {
               aria-invalid={
                 Boolean(actionData?.fieldErrors?.password) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password ? "password-error" : undefined
               }
             />
@@ -190,14 +184,14 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
           <div id="form-error-message">
             {actionData?.formError ? (
               <p className="form-validation-error" role="alert">
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>

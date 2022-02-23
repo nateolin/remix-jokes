@@ -1,5 +1,7 @@
 # Welcome to Remix!
 
+View Deployed Version here: https://sparkling-wildflower-7236.fly.dev/
+
 - [Remix Docs](https://remix.run/docs)
 
 ## Development
